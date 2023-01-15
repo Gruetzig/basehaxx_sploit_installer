@@ -9,6 +9,8 @@
 
 #define CRC_POLY 0x1021
 
+
+
 unsigned short ccitt16(unsigned char *data, unsigned int length)
 {
     unsigned short crc = 0xFFFF;
@@ -27,7 +29,7 @@ unsigned short ccitt16(unsigned char *data, unsigned int length)
     return crc;
 }
 
-Result read_savedata(const char* path, void** data, size_t* size, char gaem)
+Result read_savedata(const char* path, void** data, size_t* size, char *gaem)
 {
     if(!path || !data || !size) return -1;
 
@@ -36,9 +38,16 @@ Result read_savedata(const char* path, void** data, size_t* size, char gaem)
     void* buffer = NULL;
 
     fsUseSession(save_session);
-    if (gaem == "OR") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C400, 0x00040000}; //tid 000400000011C400
-    if (gaem == "AS") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C500, 0x00040000}; //tid 000400000011C500
-    FSUSER_OpenArchive(save_archive, ARCHIVE_USER_SAVEDATA, {PATH_BINARY, 12, path});
+    u32 pathData[3] = { MEDIATYPE_GAME_CARD, 0x00000000, 0x00040000 };
+    const FS_Path pathl = {PATH_BINARY, 12, (const void*)pathData };
+
+    if (!strcmp(gaem,"OR")) {
+       pathData[1] = 0x0011C400;
+    } else if (!strcmp(gaem,"AS")) {
+    pathData[1] = 0x0011C500;
+    }
+
+    FSUSER_OpenArchive(&save_archive, ARCHIVE_USER_SAVEDATA, pathl);
     if(R_FAILED(ret))
     {
         fail = -1;
@@ -114,17 +123,24 @@ Result write_from_file(u8* dest, char* path, u32* file_size)
 }
 
 
-Result write_savedata(const char* path, const void* data, size_t size, char gaem)
+Result write_savedata(const char* path, const void* data, size_t size, char *gaem)
 {
     if(!path || !data || size == 0) return -1;
 
     Result ret = -1;
     int fail = 0;
-
+    
     fsUseSession(save_session);
-    if (gaem == "OR") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C400, 0x00040000}; //tid 000400000011C400
-    if (gaem == "AS") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C500, 0x00040000}; //tid 000400000011C500
-    FSUSER_OpenArchive(save_archive, ARCHIVE_USER_SAVEDATA, {PATH_BINARY, 12, path});
+    u32 pathData[3] = { MEDIATYPE_GAME_CARD, 0x00000000, 0x00040000 };
+    const FS_Path pathl = {PATH_BINARY, 12, (const void*)pathData };
+
+    if (!strcmp(gaem,"OR")) {
+        pathData[1] = 0x0011C400;
+    } else if (!strcmp(gaem,"AS")) {
+        pathData[1] = 0x0011C500;
+    }
+
+    FSUSER_OpenArchive(&save_archive, ARCHIVE_USER_SAVEDATA, pathl);
     if(R_FAILED(ret))
     {
         fail = -1;

@@ -126,7 +126,14 @@ Result getGameVersion(u64 program_id, char* gameversion, u16* gameversion_id)
             snprintf(status, sizeof(status) - 1, "An error occured! Failed to initialize AM.\n    Error code: %08lX", ret);
             return ret;
         }
-gameversion_id
+        ret = AM_GetTitleInfo(1, 1, &update_program_id, &update_title);
+        amExit();
+
+        memcpy(gameversion, "1.0", 3);
+        if(R_SUCCEEDED(ret))
+        {
+            if(update_title.version == VERSION_14)
+            {
                 memcpy(gameversion, "1.4", 3);
                 *gameversion_id = VERSION_14;
             }
@@ -191,8 +198,9 @@ int main()
                 case STATE_INITIAL:
                     strcat(top_text, "Welcome to the (quite dirty) basehaxx installer!\nThis installer does NOT support digital, it could overwrite unrelated cart saves :D\nPlease proceed with caution, as you might lose data if you don't.You may press START at any time to return to menu.\nThanks to smealum and SALT team for the installer code base!\n                           Press A to continue.\n\n");
                     break;
-                case STATE_SELECT_GAME;
+                case STATE_SELECT_GAME:
                     strcat(top_text, "Select your game...\n");
+                    break;
                 /*case STATE_SELECT_FIRMWARE:
                     strcat(top_text, "Please select your console's firmware version.\nOnly select NEW 3DS if you own a New 3DS (XL).\nD-Pad to select, A to continue.\n");
                     break;
@@ -283,13 +291,13 @@ int main()
 
             case STATE_SELECT_GAME: 
             {
-                if(hidKeysDown() & KEY_LEFT) && (gametitle == "OR") strcpy(gametitle, "AS");
-                if(hidKeysDown() & KEY_RIGHT) && (gametitle == "AS") strcpy(gametitle, "OR");
-                if(hidKeysDown() & KEY_A) if(hidKeysDown() & KEY_A) {
-                    if (gametitle == "OR") {
+                if ((hidKeysDown() & KEY_LEFT) && (strcmp(gametitle, "OR"))) strcpy(gametitle, "AS");
+                if ((hidKeysDown() & KEY_RIGHT) && (strcmp(gametitle, "AS"))) strcpy(gametitle, "OR");
+                if (hidKeysDown() & KEY_A) {
+                    if (strcmp(gametitle, "OR")) {
                         program_id = 0x000400000011C400;
                     }
-                    else if (gametitle == "AS") {
+                    else if (strcmp(gametitle, "AS")) {
                         program_id = 0x000400000011C500; 
                     }
                     else {
@@ -307,9 +315,10 @@ int main()
                         break;
                     }
                 }
-                printf("Selected game: %s" gametitle);
+                printf("Selected game: %s", gametitle);
 
             }
+            break;
             /*case STATE_SELECT_FIRMWARE:
             {
                 if(hidKeysDown() & KEY_LEFT) firmware_selected_value--;
