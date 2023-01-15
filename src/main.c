@@ -393,7 +393,7 @@ int main()
                 Result ret = read_savedata("/main", &buffer, &size, gametitle);
                 if(ret)
                 {
-                    sprintf(status, "An error occured! Failed to embed payload\n    Error code: %08lX", ret);
+                    //sprintf(status, "An error occured! Failed to embed payload\n    Error code: %08lX", ret);
                     next_state = STATE_ERROR;
                     break;
                 }

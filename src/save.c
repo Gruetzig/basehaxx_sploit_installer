@@ -47,7 +47,7 @@ Result read_savedata(const char* path, void** data, size_t* size, char *gaem)
     pathData[1] = 0x0011C500;
     }
 
-    FSUSER_OpenArchive(&save_archive, ARCHIVE_USER_SAVEDATA, pathl);
+    ret = FSUSER_OpenArchive(&save_archive, ARCHIVE_USER_SAVEDATA, pathl);
     if(R_FAILED(ret))
     {
         fail = -1;
@@ -140,7 +140,7 @@ Result write_savedata(const char* path, const void* data, size_t size, char *gae
         pathData[1] = 0x0011C500;
     }
 
-    FSUSER_OpenArchive(&save_archive, ARCHIVE_USER_SAVEDATA, pathl);
+    ret = FSUSER_OpenArchive(&save_archive, ARCHIVE_USER_SAVEDATA, pathl);
     if(R_FAILED(ret))
     {
         fail = -1;
