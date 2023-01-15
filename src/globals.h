@@ -7,12 +7,12 @@
 
 #include <3ds.h>
 
-Handle save_session;
-FS_Archive save_archive;
-char status[256];
+extern Handle save_session;
+extern FS_Archive save_archive;
+extern char status[256];
 
 // http://3dbrew.org/wiki/Nandrw/sys/SecureInfo_A
-static char regions[7][4] = {
+static const char regions[7][4] = {
         "JPN",
         "USA",
         "EUR",

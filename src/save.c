@@ -27,7 +27,7 @@ unsigned short ccitt16(unsigned char *data, unsigned int length)
     return crc;
 }
 
-Result read_savedata(const char* path, void** data, size_t* size)
+Result read_savedata(const char* path, void** data, size_t* size, char gaem)
 {
     if(!path || !data || !size) return -1;
 
@@ -36,7 +36,9 @@ Result read_savedata(const char* path, void** data, size_t* size)
     void* buffer = NULL;
 
     fsUseSession(save_session);
-    ret = FSUSER_OpenArchive(&save_archive, ARCHIVE_SAVEDATA, (FS_Path){PATH_EMPTY, 1, (u8*)""});
+    if (gaem == "OR") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C400, 0x00040000}; //tid 000400000011C400
+    if (gaem == "AS") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C500, 0x00040000}; //tid 000400000011C500
+    FSUSER_OpenArchive(save_archive, ARCHIVE_USER_SAVEDATA, {PATH_BINARY, 12, path});
     if(R_FAILED(ret))
     {
         fail = -1;
@@ -105,21 +107,14 @@ Result write_from_file(u8* dest, char* path, u32* file_size)
     *file_size = size;
     fseek(file, 0, SEEK_SET);
 
-    u8* buffer = malloc(size);
-
-    if(!buffer) return -2;
-
-    fread(buffer, size, 1, file);
+    fread(dest, size, 1, file);
     fclose(file);
-
-    memcpy(dest, buffer, size);
-    free(buffer);
 
     return 0;
 }
 
 
-Result write_savedata(const char* path, const void* data, size_t size)
+Result write_savedata(const char* path, const void* data, size_t size, char gaem)
 {
     if(!path || !data || size == 0) return -1;
 
@@ -127,7 +122,9 @@ Result write_savedata(const char* path, const void* data, size_t size)
     int fail = 0;
 
     fsUseSession(save_session);
-    ret = FSUSER_OpenArchive(&save_archive, ARCHIVE_SAVEDATA,(FS_Path){PATH_EMPTY, 1, (u8*)""});
+    if (gaem == "OR") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C400, 0x00040000}; //tid 000400000011C400
+    if (gaem == "AS") const u32 path[3] = {MEDIATYPE_GAME_CARD, 0x0011C500, 0x00040000}; //tid 000400000011C500
+    FSUSER_OpenArchive(save_archive, ARCHIVE_USER_SAVEDATA, {PATH_BINARY, 12, path});
     if(R_FAILED(ret))
     {
         fail = -1;

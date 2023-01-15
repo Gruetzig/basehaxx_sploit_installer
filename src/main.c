@@ -1,5 +1,6 @@
 //
 // Created by Nba_Yoh on 01/06/2016.
+// Modified by aspargas2 on 12/30/2022
 //
 
 #include <stdio.h>
@@ -7,24 +8,27 @@
 #include <3ds.h>
 #include <string.h>
 #include "globals.h"
-#include "http.h"
 #include "save.h"
 #include "blz.h"
 
 #define VERSION_14 0x1C70
+
+Handle save_session;
+FS_Archive save_archive;
+char status[256];
 
 typedef enum
 {
     STATE_NONE,
     STATE_INITIALIZE,
     STATE_INITIAL,
-    STATE_SELECT_SLOT,
-    STATE_SELECT_FIRMWARE,
-    STATE_DOWNLOAD_PAYLOAD,
+    STATE_SELECT_GAME,
+    //STATE_SELECT_FIRMWARE,
+    STATE_READ_PAYLOAD,
     STATE_INSTALL_PAYLOAD,
     STATE_INSTALLED_PAYLOAD,
     STATE_ERROR,
-}state_t;
+} state_t;
 
 Result initFs()
 {
@@ -42,7 +46,7 @@ Result initFs()
     return ret;
 }
 
-Result initHttpc()
+/*Result initHttpc()
 {
     Result ret = 0;
 
@@ -51,7 +55,7 @@ Result initHttpc()
         snprintf(status, sizeof(status) - 1, "An error occured! Failed to initialize httpc.\n    Error code: %08lX", ret);
 
     return ret;
-}
+}*/
 
 Result getConfig(int* firmware_version)
 {
@@ -122,15 +126,7 @@ Result getGameVersion(u64 program_id, char* gameversion, u16* gameversion_id)
             snprintf(status, sizeof(status) - 1, "An error occured! Failed to initialize AM.\n    Error code: %08lX", ret);
             return ret;
         }
-
-        ret = AM_GetTitleInfo(1, 1, &update_program_id, &update_title);
-        amExit();
-
-        memcpy(gameversion, "1.0", 3);
-        if(R_SUCCEEDED(ret))
-        {
-            if(update_title.version == VERSION_14)
-            {
+gameversion_id
                 memcpy(gameversion, "1.4", 3);
                 *gameversion_id = VERSION_14;
             }
@@ -160,17 +156,17 @@ int main()
     state_t current_state = STATE_NONE;
     state_t next_state = STATE_INITIALIZE;
 
-    char gametitle[2] = {0};
-    char gameversion[3] = {0};
+    char gametitle[3];
+    char gameversion[4];
     u16 gameversion_id = 0;
 
     static char top_text[2048];
-    top_text[0] = '\0';
+    //top_text[0] = '\0';
 
     char top_text_tmp[256];
 
-    int firmware_version[6] = {0};
-    int firmware_selected_value = 0;
+    //int firmware_version[6] = {0};
+    //int firmware_selected_value = 0;
 
     u8* payload_buffer = NULL;
     u32 payload_size = 0;
@@ -193,14 +189,18 @@ int main()
                     strncat(top_text, "Initializing...please wait...\n\n", sizeof(top_text) - 1);
                     break;
                 case STATE_INITIAL:
-                    strcat(top_text, "Welcome to the (quite dirty) basehaxx installer!\nPlease proceed with caution, as you might lose data if you don't.You may press START at any time to return to menu.\nThanks to smealum and SALT team for the installer code base!\n                           Press A to continue.\n\n");
-                    snprintf(top_text_tmp, sizeof(top_text_tmp) - 1, "Pokemon %s version %s detected\nPress A to continue.\n\n", gametitle, gameversion);
+                    strcat(top_text, "Welcome to the (quite dirty) basehaxx installer!\nThis installer does NOT support digital, it could overwrite unrelated cart saves :D\nPlease proceed with caution, as you might lose data if you don't.You may press START at any time to return to menu.\nThanks to smealum and SALT team for the installer code base!\n                           Press A to continue.\n\n");
                     break;
-                case STATE_SELECT_FIRMWARE:
+                case STATE_SELECT_GAME;
+                    strcat(top_text, "Select your game...\n");
+                /*case STATE_SELECT_FIRMWARE:
                     strcat(top_text, "Please select your console's firmware version.\nOnly select NEW 3DS if you own a New 3DS (XL).\nD-Pad to select, A to continue.\n");
                     break;
                 case STATE_DOWNLOAD_PAYLOAD:
                     snprintf(top_text, sizeof(top_text) - 1,"%s\n\n\nDownloading payload...\n", top_text);
+                    break;*/
+                case STATE_READ_PAYLOAD:
+                    strncat(top_text,"\n\n\nReading payload...\n", sizeof(top_text) - 1);
                     break;
                 case STATE_INSTALL_PAYLOAD:
                     strcat(top_text, "Installing payload...\n");
@@ -232,8 +232,11 @@ int main()
                     next_state = STATE_ERROR;
                     break;
                 }
-
-                if(initHttpc())
+                if(R_FAILED(romfsInit())) {
+                    next_state = STATE_ERROR;
+                    break;
+                }
+                /*if(initHttpc())
                 {
                     next_state = STATE_ERROR;
                     break;
@@ -243,7 +246,7 @@ int main()
                 {
                     next_state = STATE_ERROR;
                     break;
-                }
+                }*/
 
                 if(getProgramID(&program_id))
                 {
@@ -251,13 +254,21 @@ int main()
                     break;
                 }
 
-                memcpy(gametitle, (program_id == 0x000400000011C400 ? "OR" : "AS"), 2);
+                /*if (program_id == 0x000400000011C400) {
+                    strcpy(gametitle, "OR");
+                } else if (program_id == 0x000400000011C500) {
+                    strcpy(gametitle, "AS");
+                } else {
+                    printf("\n\nBad program ID: %016llX\n\nYou most likely need to run the installer under\nOR/AS as the hb takeover title", program_id);
+                    next_state = STATE_ERROR;
+                    break;
+                }
 
                 if(getGameVersion(program_id, gameversion, &gameversion_id))
                 {
                     next_state = STATE_ERROR;
                     break;
-                }
+                }*/
 
                 next_state = STATE_INITIAL;
             }
@@ -266,11 +277,40 @@ int main()
             case STATE_INITIAL:
             {
                 if(hidKeysDown() & KEY_A)
-                    next_state = STATE_SELECT_FIRMWARE;
+                    next_state = STATE_SELECT_GAME;
             }
             break;
 
-            case STATE_SELECT_FIRMWARE:
+            case STATE_SELECT_GAME: 
+            {
+                if(hidKeysDown() & KEY_LEFT) && (gametitle == "OR") strcpy(gametitle, "AS");
+                if(hidKeysDown() & KEY_RIGHT) && (gametitle == "AS") strcpy(gametitle, "OR");
+                if(hidKeysDown() & KEY_A) if(hidKeysDown() & KEY_A) {
+                    if (gametitle == "OR") {
+                        program_id = 0x000400000011C400;
+                    }
+                    else if (gametitle == "AS") {
+                        program_id = 0x000400000011C500; 
+                    }
+                    else {
+                        next_state = STATE_ERROR;
+                        break;
+                    }
+                    if(getGameVersion(program_id, gameversion, &gameversion_id))
+                    {
+                        next_state = STATE_ERROR;
+                        break;
+                    }
+                    else
+                    {
+                        next_state = STATE_READ_PAYLOAD;
+                        break;
+                    }
+                }
+                printf("Selected game: %s" gametitle);
+
+            }
+            /*case STATE_SELECT_FIRMWARE:
             {
                 if(hidKeysDown() & KEY_LEFT) firmware_selected_value--;
                 if(hidKeysDown() & KEY_RIGHT) firmware_selected_value++;
@@ -306,16 +346,31 @@ int main()
                 printf("      Selected firmware: %s %d-%d-%d-%d %s  \n", firmware_version[0] ? "New3DS" : "Old3DS", firmware_version[1], firmware_version[2], firmware_version[3], firmware_version[4], regions[firmware_version[5]]);
                 printf((firmware_version[firmware_selected_value] > 0) ? "%*sv%*s" : "%*s-%*s", offset, " ", 50 - offset - 1, " ");
             }
-            break;
+            break;*/
 
-            case STATE_DOWNLOAD_PAYLOAD:
+            case STATE_READ_PAYLOAD:
             {
-                if(download_payload(&payload_buffer, &payload_size, firmware_version))
-                {
+                FILE* file = fopen("sdmc:/basehaxx_payload.bin", "r");
+                printf("Using payload from SD\n");
+                if (file == NULL) {
+                    printf("\nFailed to open otherapp payload\n");
                     next_state = STATE_ERROR;
                     break;
                 }
 
+                fseek(file, 0, SEEK_END);
+                payload_size = ftell(file);
+                fseek(file, 0, SEEK_SET);
+
+                payload_buffer = malloc(payload_size);
+                if(!payload_buffer) {
+                    next_state = STATE_ERROR;
+                    fclose(file);
+                    break;
+                }
+ 
+                fread(payload_buffer, payload_size, 1, file);
+                fclose(file);
                 next_state = STATE_INSTALL_PAYLOAD;
             }
             break;
@@ -326,7 +381,7 @@ int main()
 
                 void* buffer = NULL;
                 size_t size = 0;
-                Result ret = read_savedata("/main", &buffer, &size);
+                Result ret = read_savedata("/main", &buffer, &size, gametitle);
                 if(ret)
                 {
                     sprintf(status, "An error occured! Failed to embed payload\n    Error code: %08lX", ret);
@@ -334,13 +389,6 @@ int main()
                     break;
                 }
 
-                ret = romfsInit();
-                if(R_FAILED(ret))
-                {
-                    snprintf(status, sizeof(status) - 1, "An error occured! Failed to initialize romfs for this application (romfsInit()).\n    Error code: %08lX", ret);
-                    next_state = STATE_ERROR;
-                    break;
-                }
 
                 u32 out_size = 0;
                 char path[256];
@@ -368,7 +416,7 @@ int main()
                 ccitt = ccitt16(buffer + 0x67c00, 0xe058);
                 *(u16*)(buffer + 0x75fe2) = ccitt;
 
-                ret = write_savedata("/main", buffer, size);
+                ret = write_savedata("/main", buffer, size, gametitle);
 
                 free(buffer);
 
