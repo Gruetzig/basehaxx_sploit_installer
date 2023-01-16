@@ -164,6 +164,7 @@ int main()
     state_t next_state = STATE_INITIALIZE;
 
     char gametitle[3];
+    strcpy(gametitle, "OR"); //init gametitle
     char gameversion[4];
     u16 gameversion_id = 0;
 
@@ -291,13 +292,13 @@ int main()
 
             case STATE_SELECT_GAME: 
             {
-                if ((hidKeysDown() & KEY_LEFT) && (strcmp(gametitle, "OR"))) strcpy(gametitle, "AS");
-                if ((hidKeysDown() & KEY_RIGHT) && (strcmp(gametitle, "AS"))) strcpy(gametitle, "OR");
+                if ((hidKeysDown() & KEY_LEFT) && (!strcmp(gametitle, "OR"))) strcpy(gametitle, "AS");
+                if ((hidKeysDown() & KEY_RIGHT) && (!strcmp(gametitle, "AS"))) strcpy(gametitle, "OR");
                 if (hidKeysDown() & KEY_A) {
-                    if (strcmp(gametitle, "OR")) {
+                    if (!strcmp(gametitle, "OR")) {
                         program_id = 0x000400000011C400;
                     }
-                    else if (strcmp(gametitle, "AS")) {
+                    else if (!strcmp(gametitle, "AS")) {
                         program_id = 0x000400000011C500; 
                     }
                     else {
