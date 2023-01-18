@@ -11,10 +11,15 @@
 #include "save.h"
 #include "blz.h"
 #include "utils.h"
+#include "ui.h"
+#include <citro2d.h>
 
 Handle save_session;
 FS_Archive save_archive;
 char status[256];
+DrawContext ctx;
+int progress;
+
 
 typedef enum
 {
@@ -32,13 +37,12 @@ int main()
 {
     gfxInitDefault();
     gfxSet3D(false);
-
-    PrintConsole topConsole, bottomConsole;
-    consoleInit(GFX_TOP, &topConsole);
-    consoleInit(GFX_BOTTOM, &bottomConsole);
-
-    consoleSelect(&topConsole);
-    consoleClear();
+    cfguInit();
+    C3D_Init(C3D_DEFAULT_CMDBUF_SIZE);
+	C2D_Init(C2D_DEFAULT_MAX_OBJECTS);
+    C2D_Prepare();
+    initContext(&ctx);
+    initColors(&ctx);
 
     state_t current_state = STATE_NONE;
     state_t next_state = STATE_INITIALIZE;
@@ -49,8 +53,9 @@ int main()
     u16 gameversion_id = 0;
 
     static char top_text[2048];
-
-    char top_text_tmp[256];
+    static char action_text[2048];
+    static char note_text[2048];
+    
 
     u8* payload_buffer = NULL;
     u32 payload_size = 0;
@@ -65,30 +70,29 @@ int main()
         // transition function
         if(next_state != current_state)
         {
-            memset(top_text_tmp, 0, sizeof(top_text_tmp));
 
             switch(next_state)
             {
                 case STATE_INITIALIZE:
-                    strncat(top_text, "Initializing...please wait...\n\n", sizeof(top_text) - 1);
+                    sprintf(top_text, "Initializing...please wait...");
                     break;
                 case STATE_INITIAL:
-                    strcat(top_text, "Welcome to the (quite dirty) basehaxx installer!\nThis installer does NOT support digital, it could overwrite unrelated cart saves :D\nPlease proceed with caution, as you might lose data if you don't.You may press START at any time to return to menu.\nThanks to smealum and SALT team for the installer code base!\n                           Press A to continue.\n\n");
+                    sprintf(top_text, "Welcome to the Basehaxx installer");
                     break;
                 case STATE_SELECT_GAME:
-                    strcat(top_text, "Select your game...\n");
+                    sprintf(top_text, "Select your game...");
                     break;
                 case STATE_READ_PAYLOAD:
-                    strncat(top_text,"\n\n\nReading payload...\n", sizeof(top_text) - 1);
+                    sprintf(top_text,"Reading payload...");
                     break;
                 case STATE_INSTALL_PAYLOAD:
-                    strcat(top_text, "Installing payload...\n");
+                    sprintf(top_text, "Installing payload...");
                     break;
                 case STATE_INSTALLED_PAYLOAD:
-                    strcat(top_text, "Done ! basehaxx was successfully installed.");
+                    sprintf(top_text, "Done! basehaxx was successfully installed.");
                     break;
                 case STATE_ERROR:
-                    strcat(top_text, "Looks like something went wrong. :(\n");
+                    sprintf(top_text, "Looks like something went wrong. :(");
                     break;
                 default:
                     break;
@@ -97,11 +101,7 @@ int main()
             current_state = next_state;
         }
 
-        consoleSelect(&topConsole);
-        printf("\x1b[0;%dHBasehaxx installer based hax edition ;)\n\n", (50 - 46) / 2);
-        printf(top_text);
-
-        switch(current_state)
+        switch(current_state) //action code
         {
             case STATE_INITIALIZE:
             {
@@ -127,6 +127,7 @@ int main()
 
             case STATE_INITIAL:
             {
+                sprintf(action_text, "Press A to begin!");
                 if(hidKeysDown() & KEY_A)
                     next_state = STATE_SELECT_GAME;
             }
@@ -138,7 +139,7 @@ int main()
                 if ((hidKeysDown() & KEY_RIGHT) && (!strcmp(gametitle, "AS"))) strcpy(gametitle, "OR");
                 if (hidKeysDown() & KEY_A) {
                     if (!strcmp(gametitle, "OR")) {
-                        program_id = 0x000400000011C400;
+                         program_id = 0x000400000011C400;
                     }
                     else if (!strcmp(gametitle, "AS")) {
                         program_id = 0x000400000011C500; 
@@ -155,17 +156,18 @@ int main()
                     else
                     {
                         next_state = STATE_READ_PAYLOAD;
-                        printf("\n\nDetected version: %s", gameversion);
+                        sprintf(note_text, "Installing for  v%s", gameversion);
                         break;
                     }
                 }
-                printf("Selected game: %s", gametitle);
+                sprintf(action_text, "Selected game: %s", gametitle);
 
             }
             break;
             
             case STATE_READ_PAYLOAD:
             {
+                progress = 0;
                 FILE* file = fopen("sdmc:/basehaxx_payload.bin", "r");
                 printf("Using payload from SD\n");
                 if (file == NULL) {
@@ -173,7 +175,7 @@ int main()
                     next_state = STATE_ERROR;
                     break;
                 }
-
+                progress = 20;
                 fseek(file, 0, SEEK_END);
                 payload_size = ftell(file);
                 fseek(file, 0, SEEK_SET);
@@ -193,8 +195,9 @@ int main()
 
             case STATE_INSTALL_PAYLOAD:
             {
+                progress = 40;
                 payload_buffer = BLZ_Code(payload_buffer, payload_size, (unsigned int*)&payload_size, BLZ_NORMAL);
-
+                progress = 60;
                 void* buffer = NULL;
                 size_t size = 0;
                 Result ret = read_savedata("/main", &buffer, &size, gametitle);
@@ -204,7 +207,7 @@ int main()
                     next_state = STATE_ERROR;
                     break;
                 }
-
+                progress = 70;
 
                 u32 out_size = 0;
                 char path[256];
@@ -233,7 +236,7 @@ int main()
                 *(u16*)(buffer + 0x75fe2) = ccitt;
 
                 ret = write_savedata("/main", buffer, size, gametitle);
-
+                progress = 100;
                 free(buffer);
 
                 if(ret)
@@ -248,25 +251,36 @@ int main()
             break;
 
             case STATE_INSTALLED_PAYLOAD:
+            {
                 next_state = STATE_NONE;
                 break;
-
+            }
             default: break;
         }
+        C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
+        C2D_TargetClear(ctx.top, ctx.clrBgDark);
+        C2D_TargetClear(ctx.bottom, ctx.clrBgDark);
+        C2D_SceneBegin(ctx.top);
+        drawText(SCREEN_WIDTH_TOP/2, 0, 0, 0.75f, ctx.clrWhite, top_text);
+        drawText(SCREEN_WIDTH_TOP/2, 30*0.75f, 0, 0.6f, ctx.clrWhite, action_text);
+        drawText(SCREEN_WIDTH_TOP/2, SCREEN_HEIGHT-30*0.75f, 0, 0.6f, ctx.clrWhite, note_text);
+        if ((current_state == STATE_READ_PAYLOAD) || (current_state == STATE_INSTALL_PAYLOAD)) {
+            drawProgress(&ctx, SCREEN_WIDTH_TOP/2-100, SCREEN_HEIGHT/2-25, 0, 200, 50, ctx.clrBlue, progress);
+        }
+        C2D_SceneBegin(ctx.bottom);
+        drawText(SCREEN_WIDTH_BOTTOM/2, 0, 0, 0.5f, ctx.clrWhite, status);
+        C3D_FrameEnd(0);
+        
 
-        consoleSelect(&bottomConsole);
-        printf("\x1b[0;0H  Current status:\n    %s\n", status);
-
-        gspWaitForVBlank();
     }
 
     if(payload_buffer) free(payload_buffer);
 
-    httpcExit();
-
     svcCloseHandle(save_session);
+    C2D_Fini();
+    C3D_Fini();
     fsExit();
-
+    cfguExit();
     gfxExit();
     return 0;
 }
