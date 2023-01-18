@@ -19,7 +19,7 @@ FS_Archive save_archive;
 char status[256];
 DrawContext ctx;
 float progress;
-
+touchPosition touch;
 
 typedef enum
 {
@@ -48,12 +48,13 @@ int main()
     state_t next_state = STATE_INITIALIZE;
 
     char gametitle[3];
-    strcpy(gametitle, "OR"); //init gametitle
+    strcpy(gametitle, "__"); //init gametitle
     char gameversion[4];
     u16 gameversion_id = 0;
 
     static char top_text[2048];
     static char action_text[2048];
+    static char action2_text[2048];
     static char note_text[2048];
     
 
@@ -65,6 +66,7 @@ int main()
     while(aptMainLoop())
     {
         hidScanInput();
+        hidTouchRead(&touch);
         if(hidKeysDown() & KEY_START) break;
 
         // transition function
@@ -77,7 +79,7 @@ int main()
                     sprintf(top_text, "Initializing...please wait...");
                     break;
                 case STATE_INITIAL:
-                    sprintf(top_text, "Welcome to the Basehaxx installer");
+                    sprintf(top_text, "Welcome to the Basehaxx sploit installer");
                     break;
                 case STATE_SELECT_GAME:
                     sprintf(top_text, "Select your game...");
@@ -120,9 +122,11 @@ int main()
                     next_state = STATE_ERROR;
                     break;
                 }
-
+                
+                
+                
                 next_state = STATE_INITIAL;
-            }
+            }   
             break;
 
             case STATE_INITIAL:
@@ -135,16 +139,38 @@ int main()
 
             case STATE_SELECT_GAME: 
             {
-                if ((hidKeysDown() & KEY_LEFT) && (!strcmp(gametitle, "OR"))) strcpy(gametitle, "AS");
-                if ((hidKeysDown() & KEY_RIGHT) && (!strcmp(gametitle, "AS"))) strcpy(gametitle, "OR");
-                if (hidKeysDown() & KEY_A) {
-                    if (!strcmp(gametitle, "OR")) {
+                char tid[14];
+                sprintf(tid, "%llx", getCartID());
+                if (!strcmp(tid, "400000011c400")) 
+                {
+                    strcpy(gametitle, "OR");
+                }
+                else if (!strcmp(tid, "400000011C500")) 
+                {
+                    strcpy(gametitle, "AS");
+                }
+                else 
+                { 
+                    strcpy(gametitle, "__");
+                }
+                if (hidKeysDown() & KEY_A) 
+                {
+                    if (!strcmp(gametitle, "__"))
+                    {
+                        sprintf(note_text, "ORAS not detected, returning");
+                        next_state = STATE_INITIAL;
+                        break;
+                    }
+                    if (!strcmp(gametitle, "OR")) 
+                    {
                          program_id = 0x000400000011C400;
                     }
-                    else if (!strcmp(gametitle, "AS")) {
+                    else if (!strcmp(gametitle, "AS")) 
+                    {
                         program_id = 0x000400000011C500; 
                     }
-                    else {
+                    else 
+                    {
                         next_state = STATE_ERROR;
                         break;
                     }
@@ -160,7 +186,9 @@ int main()
                         break;
                     }
                 }
-                sprintf(action_text, "Selected game: %s", gametitle);
+                sprintf(action_text, "Detected game: %s", gametitle);
+                sprintf(action2_text, "Press A to continue");
+                sprintf(note_text, "Insert your game if you haven't already");
 
             }
             break;
@@ -168,7 +196,7 @@ int main()
             case STATE_READ_PAYLOAD:
             {
                 FILE* file = fopen("sdmc:/basehaxx_payload.bin", "r");
-                printf("Using payload from SD\n");
+                sprintf(action2_text, "Using payload from SD");
                 if (file == NULL) {
                     sprintf(status, "\nFailed to open otherapp payload\n");
                     next_state = STATE_ERROR;
@@ -250,22 +278,32 @@ int main()
 
             case STATE_INSTALLED_PAYLOAD:
             {
+                sprintf(action2_text, " ");
+                sprintf(action_text, "Press START to exit");
+                sprintf(note_text, " ");
                 next_state = STATE_NONE;
                 break;
             }
             default: break;
         }
+        
         C3D_FrameBegin(C3D_FRAME_SYNCDRAW);
         C2D_TargetClear(ctx.top, ctx.clrBgDark);
         C2D_TargetClear(ctx.bottom, ctx.clrBgDark);
         C2D_SceneBegin(ctx.top);
         drawText(SCREEN_WIDTH_TOP/2, 0, 0, 0.75f, ctx.clrWhite, top_text);
-        drawText(SCREEN_WIDTH_TOP/2, 30*0.75f, 0, 0.6f, ctx.clrWhite, action_text);
+        drawText(SCREEN_WIDTH_TOP/2, 1*30*0.75f, 0, 0.6f, ctx.clrWhite, action_text);
+        drawText(SCREEN_WIDTH_TOP/2, 2*30*0.75f, 0, 0.6f, ctx.clrWhite, action2_text);
         drawText(SCREEN_WIDTH_TOP/2, SCREEN_HEIGHT-30*0.75f, 0, 0.6f, ctx.clrWhite, note_text);
         if ((current_state == STATE_READ_PAYLOAD) || (current_state == STATE_INSTALL_PAYLOAD)) {
             drawProgress(&ctx, SCREEN_WIDTH_TOP/2-100, SCREEN_HEIGHT/2-25, 0, 200, 50, ctx.clrBlue, progress);
         }
         C2D_SceneBegin(ctx.bottom);
+        drawCreditsButton(&ctx);
+        if (creditMenu(touch))
+        {
+            drawCredits(&ctx);
+        }
         drawText(SCREEN_WIDTH_BOTTOM/2, 0, 0, 0.5f, ctx.clrWhite, status);
         C3D_FrameEnd(0);
         

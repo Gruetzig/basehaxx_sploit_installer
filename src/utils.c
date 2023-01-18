@@ -2,6 +2,8 @@
 
 #define VERSION_14 0x1C70
 
+bool creditmenu;
+
 Result initFs()
 {
     save_archive = 0;
@@ -57,11 +59,31 @@ Result getGameVersion(u64 program_id, char* gameversion, u16* gameversion_id)
             }
             else
             {
-                snprintf(status, sizeof(status) - 1, "Unsupported game version detected, please try again with a supported version.\n    Supported version : 1.0 / 1.4\n");
+                snprintf(status, sizeof(status) - 1, "Unsupported game version");
                 return ret;
             }
         }
     }
 
+    return 0;
+}
+
+u64 getCartID() 
+{
+    u32 count = 1;
+    u64 buf;
+    u32 titlesread;
+    amInit();
+    AM_GetTitleList(&titlesread, MEDIATYPE_GAME_CARD, count, &buf);
+    amExit();
+    return buf;
+}
+
+int creditMenu(touchPosition touch) 
+{
+    if (((touch.px >= 10) && (touch.px <= 50)) && ((touch.py >= 10) && (touch.py <= 30)))
+    {
+        return 1;
+    }
     return 0;
 }

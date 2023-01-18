@@ -31,6 +31,9 @@ include $(DEVKITARM)/3ds_rules
 #     - icon.png
 #     - <libctru folder>/default_icon.png
 #---------------------------------------------------------------------------------
+APP_TITLE       := basehaxx_sploit_installer
+APP_DESCRIPTION := The basehaxx exploit installer. Requires Pokemon ORAS
+APP_AUTHOR      := Nba_Yoh, Gruetzig
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build
 SOURCES		:=	src

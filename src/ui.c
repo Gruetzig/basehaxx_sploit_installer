@@ -36,3 +36,18 @@ void drawProgress(DrawContext* ctx, float x, float y, float z, float w, float h,
     C2D_DrawRectSolid(x+1, y+1, z, (w*(progress/100))-2, h-2, color);
     drawText(x+(w/2), y+h/2-(30*(h/60))/2, z, h/60, ctx->clrWhite, str);
 }
+
+void drawCreditsButton(DrawContext* ctx) {
+    C2D_DrawRectSolid(10, 10, 0, (SCREEN_WIDTH_BOTTOM/8)+10, 20, ctx->clrWhite);
+    C2D_DrawRectSolid(11, 11, 0, (SCREEN_WIDTH_BOTTOM/8)+10-2, 18, ctx->clrBlue);
+    drawText((SCREEN_WIDTH_BOTTOM/16)+15, 10, 0, 0.5f, ctx->clrWhite, "Credits");
+}
+
+void drawCredits(DrawContext* ctx) 
+{
+    C2D_DrawRectSolid(20, 20, 0, SCREEN_WIDTH_BOTTOM-40, SCREEN_HEIGHT-40, ctx->clrWhite);
+    C2D_DrawRectSolid(22, 22, 0, SCREEN_WIDTH_BOTTOM-44, SCREEN_HEIGHT-44, ctx->clrBgBright);
+    drawText(SCREEN_WIDTH_BOTTOM/2, 30, 0, 0.5f, ctx->clrBlack, "MrNbaYoh for the original installer & exploit");
+    drawText(SCREEN_WIDTH_BOTTOM/2, 45, 0, 0.5f, ctx->clrRed, "aspargas2 for the payload from SD code");
+    drawText(SCREEN_WIDTH_BOTTOM/2, 60, 0, 0.5f, ctx->clrYellow, "Gruetzig for Luma support and UI");
+}
