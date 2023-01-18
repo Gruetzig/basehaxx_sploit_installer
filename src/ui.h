@@ -21,4 +21,4 @@ typedef struct {
 void initContext(DrawContext* ctx);
 void initColors(DrawContext* ctx);
 void drawText(float x, float y, float z, float scale, u32 color, const char* value);
-void drawProgress(DrawContext* ctx, float x, float y, float z, float w, float h, u32 color, int progress);
+void drawProgress(DrawContext* ctx, float x, float y, float z, float w, float h, u32 color, float progress);

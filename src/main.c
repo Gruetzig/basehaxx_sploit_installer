@@ -18,7 +18,7 @@ Handle save_session;
 FS_Archive save_archive;
 char status[256];
 DrawContext ctx;
-int progress;
+float progress;
 
 
 typedef enum
@@ -167,7 +167,6 @@ int main()
             
             case STATE_READ_PAYLOAD:
             {
-                progress = 0;
                 FILE* file = fopen("sdmc:/basehaxx_payload.bin", "r");
                 printf("Using payload from SD\n");
                 if (file == NULL) {
@@ -175,7 +174,6 @@ int main()
                     next_state = STATE_ERROR;
                     break;
                 }
-                progress = 20;
                 fseek(file, 0, SEEK_END);
                 payload_size = ftell(file);
                 fseek(file, 0, SEEK_SET);
@@ -190,14 +188,14 @@ int main()
                 fread(payload_buffer, payload_size, 1, file);
                 fclose(file);
                 next_state = STATE_INSTALL_PAYLOAD;
+                progress = 50;
             }
             break;
 
             case STATE_INSTALL_PAYLOAD:
             {
-                progress = 40;
                 payload_buffer = BLZ_Code(payload_buffer, payload_size, (unsigned int*)&payload_size, BLZ_NORMAL);
-                progress = 60;
+
                 void* buffer = NULL;
                 size_t size = 0;
                 Result ret = read_savedata("/main", &buffer, &size, gametitle);
@@ -207,7 +205,6 @@ int main()
                     next_state = STATE_ERROR;
                     break;
                 }
-                progress = 70;
 
                 u32 out_size = 0;
                 char path[256];
@@ -236,7 +233,7 @@ int main()
                 *(u16*)(buffer + 0x75fe2) = ccitt;
 
                 ret = write_savedata("/main", buffer, size, gametitle);
-                progress = 100;
+                
                 free(buffer);
 
                 if(ret)
@@ -247,6 +244,7 @@ int main()
                 }
 
                 next_state = STATE_INSTALLED_PAYLOAD;
+                progress = 100;
             }
             break;
 

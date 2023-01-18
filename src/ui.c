@@ -28,11 +28,11 @@ void drawText(float x, float y, float z, float scale, u32 color, const char* val
     C2D_TextBufDelete(buf);
 }
 
-void drawProgress(DrawContext* ctx, float x, float y, float z, float w, float h, u32 color, int progress) { //progress 0-100
-    char str[5];
-    sprintf(str, "%d%%", progress);
+void drawProgress(DrawContext* ctx, float x, float y, float z, float w, float h, u32 color, float progress) { //progress 0-100
+    char str[331];
+    sprintf(str, "%d%%", (int)progress);
     C2D_DrawRectSolid(x, y, z, w, h, ctx->clrWhite);
-    C2D_DrawRectSolid(x+1, y+1, z, w-2, h-2, color);
-    C2D_DrawRectSolid(x+1, y+1, z, (w-2)-progress/100, h-2, ctx->clrBlack);
+    C2D_DrawRectSolid(x+1, y+1, z, w-2, h-2, ctx->clrBlack);
+    C2D_DrawRectSolid(x+1, y+1, z, (w*(progress/100))-2, h-2, color);
     drawText(x+(w/2), y+h/2-(30*(h/60))/2, z, h/60, ctx->clrWhite, str);
 }
