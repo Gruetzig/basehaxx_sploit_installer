@@ -145,7 +145,7 @@ int main()
                 {
                     strcpy(gametitle, "OR");
                 }
-                else if (!strcmp(tid, "400000011C500")) 
+                else if (!strcmp(tid, "400000011c500")) 
                 {
                     strcpy(gametitle, "AS");
                 }
@@ -163,7 +163,7 @@ int main()
                     }
                     if (!strcmp(gametitle, "OR")) 
                     {
-                         program_id = 0x000400000011C400;
+                        program_id = 0x000400000011C400;
                     }
                     else if (!strcmp(gametitle, "AS")) 
                     {
